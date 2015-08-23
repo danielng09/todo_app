@@ -31,6 +31,10 @@ var ListItem = React.createClass({
     this.props.handleSubmitEdit(this.props.item.id, this.state.text);
   },
 
+  componentDidUpdate: function() {
+    this.refs.editItemText.getDOMNode().focus();
+  },
+
   render: function() {
     var item = this.props.item;
     var textStyle = {};
@@ -39,10 +43,11 @@ var ListItem = React.createClass({
     }
 
     var viewStyle = {}, editStyle = {};
+
     if (this.state.edit === true) {
-      viewStyle={display: 'none'};
+      viewStyle = {display: 'none'};
     } else {
-      editStyle={display: 'none'};
+      editStyle = {display: 'none'};
     }
 
     return (
@@ -66,9 +71,11 @@ var ListItem = React.createClass({
           <form onSubmit={this.handleSubmitEdit}>
             <input
               type='text'
-              ref="itemTextInput"
+              ref="editItemText"
               value={this.state.text}
-              onChange={this.handleTextEdit}/>
+              onChange={this.handleTextEdit}
+              onBlur={this.handleSubmitEdit}
+              />
           </form>
         </div>
       </div>
