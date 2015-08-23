@@ -8,8 +8,29 @@ const firebaseURL = 'todo-ap.firebaseIO.com';
 require('normalize.css');
 require('../styles/main.css');
 
-
 var ListItem = React.createClass({
+
+  getInitialState: function() {
+    return (
+      { edit: false, text: this.props.item.text }
+    );
+  },
+
+  handleEdit: function() {
+    this.setState({ edit: true });
+  },
+
+  handleTextEdit: function(event) {
+    var text = event.target.value;
+    this.setState({ text: text });
+  },
+
+  handleSubmitEdit: function(event) {
+    event.preventDefault();
+    this.setState({ edit: false });
+    this.props.handleSubmitEdit(this.props.item.id, this.state.text);
+  },
+
   render: function() {
     var item = this.props.item;
     var textStyle = {};
@@ -17,20 +38,41 @@ var ListItem = React.createClass({
       textStyle = {textDecoration: 'line-through'};
     }
 
+    var viewStyle = {}, editStyle = {};
+    if (this.state.edit === true) {
+      viewStyle={display: 'none'};
+    } else {
+      editStyle={display: 'none'};
+    }
+
     return (
       <div>
-        <input
-          type='checkbox'
-          onChange={this.props.handleCheck.bind(null, item.id)} />
-        <span style={textStyle}>
-          {item.text}
-        </span>
-        <button
-          className={'btn btn-xs btn-default'}
-          onClick={this.props.handleDelete.bind(null, item.id)}>
-            <span className={"glyphicon glyphicon-remove"}/>
-        </button>
+        <div style={viewStyle}>
+          <input
+            type='checkbox'
+            checked={item.completed}
+            onChange={this.props.handleCheck.bind(null, item.id)} />
+          <span style={textStyle} onDoubleClick={this.handleEdit}>
+            {item.text}
+          </span>
+          <button
+            className={'btn btn-xs btn-default'}
+            onClick={this.props.handleDelete.bind(null, item.id)}>
+              <span className={"glyphicon glyphicon-remove"}/>
+          </button>
+        </div>
+
+        <div style={editStyle}>
+          <form onSubmit={this.handleSubmitEdit}>
+            <input
+              type='text'
+              ref="itemTextInput"
+              value={this.state.text}
+              onChange={this.handleTextEdit}/>
+          </form>
+        </div>
       </div>
+
     );
   }
 });
@@ -43,7 +85,8 @@ var List = React.createClass({
           item={item}
           key={item.id}
           handleDelete={this.props.handleDelete}
-          handleCheck={this.props.handleCheck} />
+          handleCheck={this.props.handleCheck}
+          handleSubmitEdit={this.props.handleSubmitEdit}/>
       </section>
     );
   },
@@ -79,7 +122,8 @@ var App = React.createClass({
 
   getInitialState: function() {
     return {
-      items: []
+      items: [],
+      viewType: null,
     };
   },
 
@@ -110,7 +154,27 @@ var App = React.createClass({
     this.refs.itemTextInput.getDOMNode().value = '';
   },
 
+  handleChangeView: function(view) {
+    this.setState({ viewType: view });
+  },
+
+  handleSubmitEdit: function(id, text) {
+    this.firebase.child(id).update({ text: text });
+    var items = this.state.items;
+    var item = items.filter(function(ele) {
+      return ele.id === id;
+    })[0];
+    item.text = text;
+    this.setState({ items: items});
+  },
+
   render: function() {
+    var items = this.state.items;
+    if (this.state.viewType !== null) {
+      items = this.state.items.filter(function(item) {
+        return item.completed === this.state.viewType;
+      }.bind(this))
+    }
 
     return (
       <div>
@@ -124,20 +188,25 @@ var App = React.createClass({
         </form>
 
         <List
-          items={this.state.items}
+          items={items}
           handleDelete={this.handleDelete}
-          handleCheck={this.handleCheck} />
+          handleCheck={this.handleCheck}
+          handleSubmitEdit={this.handleSubmitEdit}/>
 
+        <span>{items.length} items left</span>
         <button
-          className={'btn btn-xs btn-default'}>
+          className={'btn btn-xs btn-default'}
+          onClick={this.handleChangeView.bind(null, null)}>
           All
         </button>
         <button
-          className={'btn btn-xs btn-default'}>
+          className={'btn btn-xs btn-default'}
+          onClick={this.handleChangeView.bind(null, false)}>
           Active
         </button>
         <button
-          className={'btn btn-xs btn-default'}>
+          className={'btn btn-xs btn-default'}
+          onClick={this.handleChangeView.bind(null, true)}>
           Completed
         </button>
       </div>
